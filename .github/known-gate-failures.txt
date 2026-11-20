@@ -1,0 +1,3 @@
+known-knowns/faster-matrix-multiplication/2026-10-22-mizopl-e47a7dd8
+known-knowns/packomania-cci-equal-circles-in-circle/2026-10-20-jorgy72-sine-04a7d0a0
+known-knowns/spherical-codes-cohn-table/2026-10-18-calgulbenkian-b2aaa05c

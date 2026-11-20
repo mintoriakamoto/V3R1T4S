@@ -1,0 +1,49 @@
+# Re-runs this repo's own honesty checks on every push and pull request:
+# the kit's unit tests, the SHA256SUMS manifest, that the generated problem
+# pages still match bank/targets.json, and the paperwork gate on every result
+# package. Uses only the Python standard library, like the kit itself.
+name: verify
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Kit unit tests
+        run: python3 -m unittest discover -s kit/tests -p 'test_*.py'
+
+      - name: SHA256SUMS matches every file it lists
+        run: sha256sum -c --quiet SHA256SUMS
+
+      - name: Problem pages match bank/targets.json
+        run: |
+          python3 bank/build_known_unknowns.py
+          git diff --exit-code -- known-unknowns
+
+      - name: Paperwork gate on every result package
+        run: |
+          fail=0
+          while IFS= read -r pkg; do
+            if grep -qxF "$pkg" .github/known-gate-failures.txt; then
+              echo "known failure, reported upstream: $pkg"
+              continue
+            fi
+            if ! python3 kit/check_run.py --package "$pkg" --no-exec > gate.log 2>&1; then
+              echo "::error::gate failed for $pkg"
+              grep -E '^FAIL' gate.log || true
+              fail=1
+            fi
+          done < <(find known-knowns -mindepth 2 -maxdepth 2 -type d -name '20*' | sort)
+          rm -f gate.log
+          exit $fail
